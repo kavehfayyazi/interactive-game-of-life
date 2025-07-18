@@ -53,20 +53,45 @@ def main(stdscr):
     population_rate = 0.15
     game = Game(height, width, population_rate)
     
-    # Hide cursor
+    # Hide cursor and enable cursor events
     curses.curs_set(0)
+    curses.mousemask(curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
 
     # Enable color functionality
     curses.start_color()
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_WHITE) # color_number of 1 for white
     curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_BLACK) # color_number of 2 for black
 
+    stdscr.nodelay(True)
+
     # Infinite game loop
+    game_tick = 0.08
+    last_update = time.time()
     while True:
-        stdscr.refresh()
-        draw_game(stdscr, game)
-        game.update()
-        time.sleep(0.1)
+        now = time.time()
+
+        # Look for cursor events
+        key = stdscr.getch()
+        if key == curses.KEY_MOUSE:
+            _, mx, my, _, _ = curses.getmouse()
+            if 0 <= my < game.height and 0 <= mx < game.width:
+                # Instantly draw the cell
+                game.grid[my][mx] ^= 1
+                color = curses.color_pair(1) if game.grid[my][mx] else curses.color_pair(2)
+                stdscr.addstr(my, mx, ' ', color)
+                stdscr.refresh()
+        elif key == ord('q'):
+            break
+        elif key == curses.ERR:
+            pass
+
+        # Cuts out time delay waiting for cursor events
+        if now - last_update >= game_tick:
+            # Update game
+            game.update()
+            draw_game(stdscr, game)
+            stdscr.refresh()
+            last_update = now
 
 if __name__ == '__main__':
     wrapper(main)
